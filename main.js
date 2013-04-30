@@ -31,6 +31,7 @@ define(function (require, exports, module) {
     var CommandManager      = brackets.getModule("command/CommandManager"),
         Commands            = brackets.getModule("command/Commands"),
         Menus               = brackets.getModule("command/Menus"),
+        KeyBindingManager   = brackets.getModule("command/KeyBindingManager"),
         DocumentManager     = brackets.getModule("document/DocumentManager"),
         ProjectManager      = brackets.getModule("project/ProjectManager"),
         QuickOpen           = brackets.getModule("search/QuickOpen"),
@@ -40,7 +41,7 @@ define(function (require, exports, module) {
     
     /**
      * @param {string} query User query/filter string
-     * @return {Array.<FileEntry>} Sorted and filtered results that match the query
+     * @return {Array.<SearchResult>} Sorted and filtered results that match the query
      */
     function search(query) {
         /* @type {Array.<FileEntry>} */
@@ -50,9 +51,10 @@ define(function (require, exports, module) {
         
         // Filter and rank how good each match is
         var filteredList = $.map(workingSet, function (fileEntry) {
-            // match query against filename only (not the full path)
-            var searchResult = QuickOpen.stringMatch(fileEntry.name, query);
+            // Match query against the full project-relative path
+            var searchResult = QuickOpen.stringMatch(ProjectManager.makeProjectRelativeIfPossible(fileEntry.fullPath), query);
             if (searchResult) {
+                searchResult.label = fileEntry.name;
                 searchResult.fullPath = fileEntry.fullPath;
             }
             return searchResult;
@@ -91,22 +93,21 @@ define(function (require, exports, module) {
      * @return {string}
      */
     function resultFormatter(item, query) {
-        // Virtually identical to QuickOpen._filenameResultsFormatter() - TODO: share code
-        query = query.substr(1);  // lose the "/" prefix
-        query = StringUtils.htmlEscape(query);
+        // TODO: identical to QuickOpen._filenameResultsFormatter()
         
-        var displayName = StringUtils.htmlEscape(item.label);
-        var displayFullPath = StringUtils.htmlEscape(ProjectManager.makeProjectRelativeIfPossible(item.fullPath));
-        
-        if (query.length > 0) {
-            // make query text bold within the item's label
-            displayName = displayName.replace(
-                new RegExp(StringUtils.regexEscape(query), "gi"),
-                "<strong>$&</strong>"
-            );
+        // For main label, we just want filename: drop most of the string
+        function fileNameFilter(includesLastSegment, rangeText) {
+            if (includesLastSegment) {
+                var rightmostSlash = rangeText.lastIndexOf('/');
+                return rangeText.substring(rightmostSlash + 1);  // safe even if rightmostSlash is -1
+            } else {
+                return "";
+            }
         }
+        var displayName = QuickOpen.highlightMatch(item, null, fileNameFilter);
+        var displayPath = QuickOpen.highlightMatch(item, "quicksearch-pathmatch");
         
-        return "<li>" + displayName + "<br /><span class='quick-open-path'>" + displayFullPath + "</span></li>";
+        return "<li>" + displayName + "<br /><span class='quick-open-path'>" + displayPath + "</span></li>";
     }
     
     
@@ -114,7 +115,8 @@ define(function (require, exports, module) {
     QuickOpen.addQuickOpenPlugin(
         {
             name: "Commands",
-            fileTypes: [],  // empty array = all file types
+            languageIds: [],  // empty array = all file types  (Sprint 23+)
+            fileTypes:   [],  // (< Sprint 23)
             done: function () {},
             search: search,
             match: match,
@@ -174,6 +176,11 @@ define(function (require, exports, module) {
     var GO_PREV_COMMAND_ID = "pflynn.goWorkingSetPrev";
     CommandManager.register("Next Document in List", GO_NEXT_COMMAND_ID, goNextFile);
     CommandManager.register("Previous Document in List", GO_PREV_COMMAND_ID, goPrevFile);
+    
+    // TODO: Unbind back/forward nav shortcuts from the default indent/unindent commands
+    // (They are redundant anyway, since Tab/Shift+Tab do the same thing)
+    KeyBindingManager.removeBinding("Ctrl-[");
+    KeyBindingManager.removeBinding("Ctrl-]");
     
     // Add menus items in reverse order: we can't use Menus.BEFORE relative to a divider, so
     // use Menus.AFTER on the item just above the divider
