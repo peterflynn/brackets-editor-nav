@@ -1,7 +1,7 @@
 {
     "name": "pflynn.brackets.editor.nav",
     "title": "File Navigation Shortcuts",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "engines": { "brackets": ">=0.19" },
     "description": "Shortcuts for switching to next/previous editor (non-MRU order), and a version of Quick Open scoped to only open files. Use Ctrl+]/[ (Cmd on Mac) to switch editors. Use Ctrl+Shift+E (Cmd on Mac) for scoped Quick Open."
 }

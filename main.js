@@ -43,16 +43,18 @@ define(function (require, exports, module) {
      * @param {string} query User query/filter string
      * @return {Array.<SearchResult>} Sorted and filtered results that match the query
      */
-    function search(query) {
+    function search(query, matcher) {
         /* @type {Array.<FileEntry>} */
         var workingSet = DocumentManager.getWorkingSet();
         
         query = query.substr(1);  // lose the "/" prefix
         
+        var stringMatch = (matcher && matcher.match) ? matcher.match.bind(matcher) : QuickOpen.stringMatch;
+        
         // Filter and rank how good each match is
         var filteredList = $.map(workingSet, function (fileEntry) {
             // Match query against the full project-relative path
-            var searchResult = QuickOpen.stringMatch(ProjectManager.makeProjectRelativeIfPossible(fileEntry.fullPath), query);
+            var searchResult = stringMatch(ProjectManager.makeProjectRelativeIfPossible(fileEntry.fullPath), query);
             if (searchResult) {
                 searchResult.label = fileEntry.name;
                 searchResult.fullPath = fileEntry.fullPath;
@@ -122,7 +124,8 @@ define(function (require, exports, module) {
             match: match,
             itemFocus: function () {},
             itemSelect: itemSelect,
-            resultsFormatter: resultFormatter
+            resultsFormatter: resultFormatter,
+            matcherOptions: { segmentedSearch: true }
         }
     );
     
@@ -177,7 +180,7 @@ define(function (require, exports, module) {
     CommandManager.register("Next Document in List", GO_NEXT_COMMAND_ID, goNextFile);
     CommandManager.register("Previous Document in List", GO_PREV_COMMAND_ID, goPrevFile);
     
-    // TODO: Unbind back/forward nav shortcuts from the default indent/unindent commands
+    // Unbind back/forward nav shortcuts from the default indent/unindent commands so we can use them.
     // (They are redundant anyway, since Tab/Shift+Tab do the same thing)
     KeyBindingManager.removeBinding("Ctrl-[");
     KeyBindingManager.removeBinding("Ctrl-]");
