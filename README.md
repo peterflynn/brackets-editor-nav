@@ -1,5 +1,5 @@
-Editor Navigation Shortcuts for Brackets
-========================================
+File Navigation Shortcuts for Brackets
+======================================
 Adds Eclipse-style keyboard navigation to switch between open files:
 
 * Press Cmd+Shift+E (Ctrl+Shift+E on Win) and start typing the name of an open file to jump to it
@@ -10,12 +10,12 @@ Adds Eclipse-style keyboard navigation to switch between open files:
 
 How to Install
 ==============
-Editor Navigation Shortcuts is an extension for [Brackets](https://github.com/adobe/brackets/), a new open-source code editor for the web.
+File Navigation Shortcuts is an extension for [Brackets](https://github.com/adobe/brackets/), a new open-source code editor for the web.
 
-To use Editor Navigation Shortcuts:
+To install extensions:
 
-1. Choose _File > Install Extension_
-2. Enter this URL: _https://github.com/peterflynn/brackets-editor-nav_
+1. Choose _File > Extension Manager_ and select the _Available_ tab
+2. Search for this extension
 3. Click _Install_!
 
 

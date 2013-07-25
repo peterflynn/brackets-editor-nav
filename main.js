@@ -33,6 +33,7 @@ define(function (require, exports, module) {
         Menus               = brackets.getModule("command/Menus"),
         KeyBindingManager   = brackets.getModule("command/KeyBindingManager"),
         DocumentManager     = brackets.getModule("document/DocumentManager"),
+        NativeFileSystem    = brackets.getModule("file/NativeFileSystem").NativeFileSystem,
         ProjectManager      = brackets.getModule("project/ProjectManager"),
         QuickOpen           = brackets.getModule("search/QuickOpen"),
         StringUtils         = brackets.getModule("utils/StringUtils");
@@ -53,8 +54,18 @@ define(function (require, exports, module) {
         
         // Filter and rank how good each match is
         var filteredList = $.map(workingSet, function (fileEntry) {
-            // Match query against the full project-relative path
-            var searchResult = stringMatch(ProjectManager.makeProjectRelativeIfPossible(fileEntry.fullPath), query);
+            // Match query against the full project-relative path, like regular Quick Open
+            var fullPath, projRelPath;
+            if (NativeFileSystem.InaccessibleFileEntry && (fileEntry instanceof NativeFileSystem.InaccessibleFileEntry)) {
+                // But exclude dummy path of Untitled docs (which regular Quick Open never encounters)
+                fullPath = fileEntry.name;
+                projRelPath = fullPath;
+            } else {
+                fullPath = fileEntry.fullPath;
+                projRelPath = ProjectManager.makeProjectRelativeIfPossible(fullPath);  // unlike regular QO, this might fail & be left abs
+            }
+            
+            var searchResult = stringMatch(projRelPath, query);
             if (searchResult) {
                 searchResult.label = fileEntry.name;
                 searchResult.fullPath = fileEntry.fullPath;
