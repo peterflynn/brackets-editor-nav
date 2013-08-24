@@ -22,22 +22,25 @@
 
 
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, indent: 4, maxerr: 50 */
-/*global define, brackets, $ */
+/*global define, brackets, $, window */
 
 define(function (require, exports, module) {
     "use strict";
     
     // Brackets modules
     var CommandManager      = brackets.getModule("command/CommandManager"),
+        KeyEvent            = brackets.getModule("utils/KeyEvent"),
         Commands            = brackets.getModule("command/Commands"),
         Menus               = brackets.getModule("command/Menus"),
         KeyBindingManager   = brackets.getModule("command/KeyBindingManager"),
         DocumentManager     = brackets.getModule("document/DocumentManager"),
         NativeFileSystem    = brackets.getModule("file/NativeFileSystem").NativeFileSystem,
         ProjectManager      = brackets.getModule("project/ProjectManager"),
-        QuickOpen           = brackets.getModule("search/QuickOpen"),
-        StringUtils         = brackets.getModule("utils/StringUtils");
+        QuickOpen           = brackets.getModule("search/QuickOpen");
     
+    
+    /** @type {boolean} True during a contiguous sequence of Ctrl+]/[ gestures (while Ctrl held down) */
+    var _duringNavigation = false;
     
     
     /**
@@ -171,17 +174,39 @@ define(function (require, exports, module) {
         return null;
     }
     
-    function goNextFile() {
-        var file = getRelativeFile(+1);
+    
+    // End navigation sequence, allowing MRU order to update
+    function endDocumentNav(event) {
+        if (event.keyCode === KeyEvent.DOM_VK_CONTROL) {
+            DocumentManager.finalizeDocumentNavigation();
+            
+            _duringNavigation = false;
+            $(window.document.body).off("keyup", endDocumentNav);
+        }
+    }
+    
+    function navigateTo(file) {
         if (file) {
+            if (!_duringNavigation) {
+                _duringNavigation = true;
+                
+                // Freeze MRU order until Ctrl keyup so that a quick sequence of contiguous next/prevs
+                // don't shuffle around the whole order
+                DocumentManager.beginDocumentNavigation();
+                $(window.document.body).keyup(endDocumentNav);
+            }
+            
             CommandManager.execute(Commands.FILE_OPEN, { fullPath: file.fullPath });
         }
     }
+    
+    function goNextFile() {
+        var file = getRelativeFile(+1);
+        navigateTo(file);
+    }
     function goPrevFile() {
         var file = getRelativeFile(-1);
-        if (file) {
-            CommandManager.execute(Commands.FILE_OPEN, { fullPath: file.fullPath });
-        }
+        navigateTo(file);
     }
     
 
