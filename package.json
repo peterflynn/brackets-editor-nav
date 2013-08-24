@@ -3,7 +3,7 @@
     "title": "File Navigation Shortcuts",
     "homepage": "https://github.com/peterflynn/brackets-editor-nav",
     "author": "Peter Flynn",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "engines": { "brackets": ">=0.19" },
-    "description": "Shortcuts for switching to next/previous editor (non-MRU order), and a version of Quick Open scoped to only open files. Use Ctrl+]/[ (Cmd on Mac) to switch editors. Use Ctrl+Shift+E (Cmd on Mac) for scoped Quick Open."
+    "description": "(1) Go to next/previous editor in list order, instead of MRU – Ctrl+]/[, and (2) Quick Open filtered to just your open \"Working Files\" – Ctrl+Shift+E. (Shortcuts use Cmd on Mac)."
 }

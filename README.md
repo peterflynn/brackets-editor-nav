@@ -2,10 +2,11 @@ File Navigation Shortcuts for Brackets
 ======================================
 Adds Eclipse-style keyboard navigation to switch between open files:
 
-* Press Cmd+Shift+E (Ctrl+Shift+E on Win) and start typing the name of an open file to jump to it
-    * (This is different from Brackets' standard Quick Open command, which searches _all_ files in your project)
-* Press Cmd+\[ or ] (Ctrl+\[ or ] on Win) to move to the next/previous file in the open files list
-    * (This is different from Brackets' standard Ctrl+Tab shortcut, which navigates in MRU order)
+* Press Ctrl+Shift+E (Cmd on Mac) to use Quick Open with just the "Working Files" list (type part of a file name and press Enter to open it)
+    * While the standard Quick Open command searches _all_ files in your project, this is filtered to only search open files (the "Working Files" list)
+* Press Ctrl+\[ or ] (Cmd on Mac) to switch to the next/previous file in the "Working Files" list
+    * While the standard Ctrl+Tab shortcut navigates in MRU order, this navigates in the exact order shown in the "Working Files" list
+    * Keep Ctrl held down to skip past files without moving them to the front of the MRU order (just like the standard Ctrl+Tab)
 
 
 How to Install
