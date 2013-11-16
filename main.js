@@ -34,7 +34,6 @@ define(function (require, exports, module) {
         Menus               = brackets.getModule("command/Menus"),
         KeyBindingManager   = brackets.getModule("command/KeyBindingManager"),
         DocumentManager     = brackets.getModule("document/DocumentManager"),
-        NativeFileSystem    = brackets.getModule("file/NativeFileSystem").NativeFileSystem,
         ProjectManager      = brackets.getModule("project/ProjectManager"),
         QuickOpen           = brackets.getModule("search/QuickOpen");
     
@@ -42,6 +41,12 @@ define(function (require, exports, module) {
     /** @type {boolean} True during a contiguous sequence of Ctrl+]/[ gestures (while Ctrl held down) */
     var _duringNavigation = false;
     
+    
+    /** True if given File[Entry] represents an untitled document. Compatible with all Brackets versions */
+    function isUntitled(file) {
+        var doc = DocumentManager.getOpenDocumentForPath(file.fullPath);
+        return doc && doc.isUntitled && doc.isUntitled();
+    }
     
     /**
      * @param {string} query User query/filter string
@@ -59,13 +64,13 @@ define(function (require, exports, module) {
         var filteredList = $.map(workingSet, function (fileEntry) {
             // Match query against the full project-relative path, like regular Quick Open
             var fullPath, projRelPath;
-            if (NativeFileSystem.InaccessibleFileEntry && (fileEntry instanceof NativeFileSystem.InaccessibleFileEntry)) {
+            if (isUntitled(fileEntry)) {
                 // But exclude dummy path of Untitled docs (which regular Quick Open never encounters)
                 fullPath = fileEntry.name;
                 projRelPath = fullPath;
             } else {
                 fullPath = fileEntry.fullPath;
-                projRelPath = ProjectManager.makeProjectRelativeIfPossible(fullPath);  // unlike regular QO, this might fail & be left abs
+                projRelPath = ProjectManager.makeProjectRelativeIfPossible(fullPath);  // note: might fail & return original abs path
             }
             
             var searchResult = stringMatch(projRelPath, query);
@@ -87,9 +92,7 @@ define(function (require, exports, module) {
      * @return {boolean} true if this plugin wants to provide results for this query
      */
     function match(query) {
-        if (query.indexOf("/") === 0) {
-            return true;
-        }
+        return query[0] === "/";
     }
 
     /**
@@ -131,6 +134,7 @@ define(function (require, exports, module) {
     QuickOpen.addQuickOpenPlugin(
         {
             name: "Commands",
+            label: "Working Set",  // ignored before Sprint 34
             languageIds: [],  // empty array = all file types  (Sprint 23+)
             fileTypes:   [],  // (< Sprint 23)
             done: function () {},
@@ -209,7 +213,7 @@ define(function (require, exports, module) {
         navigateTo(file);
     }
     
-
+    
     // Commands for back/forward navigation shortcuts
     var GO_NEXT_COMMAND_ID = "pflynn.goWorkingSetNext";
     var GO_PREV_COMMAND_ID = "pflynn.goWorkingSetPrev";
