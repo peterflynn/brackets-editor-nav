@@ -222,8 +222,14 @@ define(function (require, exports, module) {
     
     // Unbind back/forward nav shortcuts from the default indent/unindent commands so we can use them.
     // (They are redundant anyway, since Tab/Shift+Tab do the same thing)
-    KeyBindingManager.removeBinding("Ctrl-[");
-    KeyBindingManager.removeBinding("Ctrl-]");
+    if (brackets.platform === "mac") {
+        // (unlike addBinding(), remove does not automatically map Ctrl to Cmd on Mac - must be explicit)
+        KeyBindingManager.removeBinding("Cmd-[");
+        KeyBindingManager.removeBinding("Cmd-]");
+    } else {
+        KeyBindingManager.removeBinding("Ctrl-[");
+        KeyBindingManager.removeBinding("Ctrl-]");
+    }
     
     // Add menus items in reverse order: we can't use Menus.BEFORE relative to a divider, so
     // use Menus.AFTER on the item just above the divider
