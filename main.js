@@ -33,6 +33,7 @@ define(function (require, exports, module) {
         Commands            = brackets.getModule("command/Commands"),
         Menus               = brackets.getModule("command/Menus"),
         KeyBindingManager   = brackets.getModule("command/KeyBindingManager"),
+        MainViewManager     = brackets.getModule("view/MainViewManager"),
         DocumentManager     = brackets.getModule("document/DocumentManager"),
         ProjectManager      = brackets.getModule("project/ProjectManager"),
         QuickOpen           = brackets.getModule("search/QuickOpen");
@@ -42,10 +43,10 @@ define(function (require, exports, module) {
     var _duringNavigation = false;
     
     
-    /** True if given File[Entry] represents an untitled document. Compatible with all Brackets versions */
+    /** True if given File[Entry] represents an untitled document */
     function isUntitled(file) {
         var doc = DocumentManager.getOpenDocumentForPath(file.fullPath);
-        return doc && doc.isUntitled && doc.isUntitled();
+        return doc && doc.isUntitled();
     }
     
     /**
@@ -54,7 +55,7 @@ define(function (require, exports, module) {
      */
     function search(query, matcher) {
         /* @type {Array.<FileEntry>} */
-        var workingSet = DocumentManager.getWorkingSet();
+        var workingSet = MainViewManager.getWorkingSet(MainViewManager.ALL_PANES);
         
         query = query.substr(1);  // lose the "/" prefix
         
@@ -159,11 +160,11 @@ define(function (require, exports, module) {
      * @return {FileEntry}
      */
     function getRelativeFile(inc) {
-        var currentDocument = DocumentManager.getCurrentDocument();
-        if (currentDocument) {
-            var workingSetI = DocumentManager.findInWorkingSet(currentDocument.file.fullPath);
+        var currentFile = MainViewManager.getCurrentlyViewedFile();
+        if (currentFile) {
+            var workingSetI = MainViewManager.findInWorkingSet(MainViewManager.ACTIVE_PANE, currentFile.fullPath);
             if (workingSetI !== -1) {
-                var workingSet = DocumentManager.getWorkingSet();
+                var workingSet = MainViewManager.getWorkingSet(MainViewManager.ACTIVE_PANE);
                 var switchToI = workingSetI + inc;
                 if (switchToI < 0) {
                     switchToI += workingSet.length;
@@ -181,8 +182,9 @@ define(function (require, exports, module) {
     
     // End navigation sequence, allowing MRU order to update
     function endDocumentNav(event) {
-        if (event.keyCode === KeyEvent.DOM_VK_CONTROL) {
-            DocumentManager.finalizeDocumentNavigation();
+        // Releasing any one of the modifiers ends the contiguous-nav sequence
+        if (event.keyCode === KeyEvent.DOM_VK_CONTROL || event.keyCode === KeyEvent.DOM_VK_META || event.keyCode === KeyEvent.DOM_VK_SHIFT) {
+            MainViewManager.endTraversal();
             
             _duringNavigation = false;
             $(window.document.body).off("keyup", endDocumentNav);
@@ -196,7 +198,7 @@ define(function (require, exports, module) {
                 
                 // Freeze MRU order until Ctrl keyup so that a quick sequence of contiguous next/prevs
                 // don't shuffle around the whole order
-                DocumentManager.beginDocumentNavigation();
+                MainViewManager.beginTraversal();
                 $(window.document.body).keyup(endDocumentNav);
             }
             
@@ -220,27 +222,27 @@ define(function (require, exports, module) {
     CommandManager.register("Next Document in List", GO_NEXT_COMMAND_ID, goNextFile);
     CommandManager.register("Previous Document in List", GO_PREV_COMMAND_ID, goPrevFile);
     
-    // Unbind back/forward nav shortcuts from the default indent/unindent commands so we can use them.
-    // (They are redundant anyway, since Tab/Shift+Tab do the same thing)
-    if (brackets.platform === "mac") {
-        // (unlike addBinding(), remove does not automatically map Ctrl to Cmd on Mac - must be explicit)
-        KeyBindingManager.removeBinding("Cmd-[");
-        KeyBindingManager.removeBinding("Cmd-]");
-    } else {
-        KeyBindingManager.removeBinding("Ctrl-[");
-        KeyBindingManager.removeBinding("Ctrl-]");
-    }
+    // Made-up shortcut on Windows. On Mac, follows the convention many other tabbed apps use.
+    // On both platforms, these conflict with core Brackets shortcuts:
+    //  - Win: indent/unindent, but those were redundant since Tab/Shift-Tab do the same thing
+    //  - Mac: MRU nav, but redundant since Ctrl-[Shift-]Tab do the same thing, and this actually
+    //       makes the behavior for this shortcut more platform-correct
+    var GO_NEXT_SHORTCUT = (brackets.platform === "mac") ? "Cmd-Shift-]" : "Ctrl-]";
+    var GO_PREV_SHORTCUT = (brackets.platform === "mac") ? "Cmd-Shift-[" : "Ctrl-[";
+    // Note: removeBinding() doesn't automatically map Ctrl to Cmd on Mac, so must explicitly say Cmd in these values
+    
+    KeyBindingManager.removeBinding(GO_PREV_SHORTCUT);
+    KeyBindingManager.removeBinding(GO_NEXT_SHORTCUT);
     
     // Add menus items in reverse order: we can't use Menus.BEFORE relative to a divider, so
     // use Menus.AFTER on the item just above the divider
     var menu = Menus.getMenu(Menus.AppMenuBar.NAVIGATE_MENU);
-    menu.addMenuItem(GO_PREV_COMMAND_ID, "Ctrl-[", Menus.AFTER, Commands.NAVIGATE_PREV_DOC);
-    menu.addMenuItem(GO_NEXT_COMMAND_ID, "Ctrl-]", Menus.AFTER, Commands.NAVIGATE_PREV_DOC);
+    menu.addMenuItem(GO_PREV_COMMAND_ID, GO_PREV_SHORTCUT, Menus.AFTER, Commands.NAVIGATE_PREV_DOC);
+    menu.addMenuItem(GO_NEXT_COMMAND_ID, GO_NEXT_SHORTCUT, Menus.AFTER, Commands.NAVIGATE_PREV_DOC);
     menu.addMenuDivider(Menus.AFTER, Commands.NAVIGATE_PREV_DOC);
     
     // Command to launch our Quick Open mode
     var SEARCH_WORKING_SET_COMMAND_ID = "pflynn.searchWorkingSetFiles";
     CommandManager.register("Go to Open File", SEARCH_WORKING_SET_COMMAND_ID, beginFileSearch);
     menu.addMenuItem(SEARCH_WORKING_SET_COMMAND_ID, "Ctrl-Shift-E", Menus.AFTER, GO_PREV_COMMAND_ID);
-    
 });
